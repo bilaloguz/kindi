@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kindi</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #4fc3f7;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            /* Ensure no decorative flag or other content is injected */
+            position: relative;
+        }
+        /* Hide any images accidentally injected into the title */
+        h1 img { display: none !important; }
+        /* Prevent extensions/styles from adding pseudo-element content */
+        h1::before, h1::after { content: none !important; }
+        
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 30px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #4fc3f7;
+        }
+        
+        .stat-card h3 {
+            font-size: 0.9em;
+            color: #888;
+            margin-bottom: 5px;
+        }
+        
+        .stat-card .value {
+            font-size: 2em;
+            color: #4fc3f7;
+            font-weight: bold;
+        }
+        
+        .stat-card .subvalue {
+            font-size: 0.85em;
+            color: #aaa;
+            margin-top: 5px;
+        }
+        
+        .tables-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .table-card {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .table-card h2 {
+            color: #4fc3f7;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background: #333;
+            color: #4fc3f7;
+            padding: 10px;
+            text-align: left;
+            font-size: 0.9em;
+        }
+        
+        td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #333;
+        }
+        
+        tr:hover {
+            background: #333;
+        }
+        
+        .frequency {
+            color: #81c784;
+            font-weight: bold;
+        }
+        
+        .last-word {
+            color: #aaa;
+            font-size: 0.9em;
+        }
+        
+        .words-section {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .words-section h2 {
+            color: #4fc3f7;
+            margin-bottom: 15px;
+        }
+        
+        .word-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .word-tag {
+            background: #333;
+            color: #e0e0e0;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.9em;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #888;
+            padding: 40px;
+        }
+        
+        .refresh-info {
+            text-align: center;
+            color: #666;
+            font-size: 0.85em;
+            margin-top: 20px;
+        }
+        
+        .error {
+            background: #d32f2f;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Kindi</h1>
+        <p class="subtitle">Türkçe Sıklık Analizi</p>
+        
+        <div id="content">
+            <div class="loading">Veriler yükleniyor...</div>
+        </div>
+        
+        <div class="refresh-info">Her 5 saniyede otomatik yenilenir</div>
+    </div>
+    
+    <script>
+        function formatPercent(part, total) {
+            if (!total || !part) return '%0';
+            const pct = (part / total) * 100;
+            return '%' + pct.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        async function fetchData() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+                
+                if (data.error) {
+                    document.getElementById('content').innerHTML = `
+                        <div class="error">Hata: ${data.error}</div>
+                    `;
+                    return;
+                }
+                
+                renderDashboard(data);
+            } catch (error) {
+                document.getElementById('content').innerHTML = `
+                    <div class="error">Veriler yüklenemedi: ${error.message}</div>
+                `;
+            }
+        }
+        
+        function renderDashboard(data) {
+            const html = `
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Taranan Sayfa</h3>
+                        <div class="value">${data.stats.pages.toLocaleString()}</div>
+                        <div class="subvalue">${data.stats.queue.toLocaleString()} kuyrukta</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Türkçe Kelime</h3>
+                        <div class="value">${data.stats.words.toLocaleString()}</div>
+                        <div class="subvalue">Benzersiz kelime</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Heceler</h3>
+                        <div class="value">${data.stats.syllables.unique.toLocaleString()}</div>
+                        <div class="subvalue">${data.stats.syllables.total.toLocaleString()} toplam</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Harfler</h3>
+                        <div class="value">${data.stats.monographs.unique}</div>
+                        <div class="subvalue">${data.stats.monographs.total.toLocaleString()} toplam</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>İkili Harfler</h3>
+                        <div class="value">${data.stats.digraphs.unique}</div>
+                        <div class="subvalue">${data.stats.digraphs.total.toLocaleString()} toplam</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Üçlü Harfler</h3>
+                        <div class="value">${data.stats.trigraphs.unique.toLocaleString()}</div>
+                        <div class="subvalue">${data.stats.trigraphs.total.toLocaleString()} toplam</div>
+                    </div>
+                </div>
+                
+                <div class="tables-grid">
+                    <div class="table-card">
+                        <h2>En Çok 20 Hece</h2>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Hece</th>
+                                    <th>Sıklık</th>
+                                    <th>Son Kelime</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.top_syllables.map((item, i) => `
+                                    <tr>
+                                        <td>${i + 1}</td>
+                                        <td><strong>${item.syllable}</strong></td>
+                                        <td class="frequency">${formatPercent(item.frequency, data.stats.syllables.total)}</td>
+                                        <td class="last-word">${item.last_word}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="table-card">
+                        <h2>En Çok 20 Harf</h2>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Harf</th>
+                                    <th>Sıklık</th>
+                                    <th>Son Kelime</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.top_monographs.map((item, i) => `
+                                    <tr>
+                                        <td>${i + 1}</td>
+                                        <td><strong>${item.monograph}</strong></td>
+                                        <td class="frequency">${formatPercent(item.frequency, data.stats.monographs.total)}</td>
+                                        <td class="last-word">${item.last_word}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="table-card">
+                        <h2>En Çok 20 İkili Harf</h2>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>İkili Harf</th>
+                                    <th>Sıklık</th>
+                                    <th>Son Kelime</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.top_digraphs.map((item, i) => `
+                                    <tr>
+                                        <td>${i + 1}</td>
+                                        <td><strong>${item.digraph}</strong></td>
+                                        <td class="frequency">${formatPercent(item.frequency, data.stats.digraphs.total)}</td>
+                                        <td class="last-word">${item.last_word}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="table-card">
+                        <h2>En Çok 20 Üçlü Harf</h2>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Üçlü Harf</th>
+                                    <th>Sıklık</th>
+                                    <th>Son Kelime</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.top_trigraphs.map((item, i) => `
+                                    <tr>
+                                        <td>${i + 1}</td>
+                                        <td><strong>${item.trigraph}</strong></td>
+                                        <td class="frequency">${formatPercent(item.frequency, data.stats.trigraphs.total)}</td>
+                                        <td class="last-word">${item.last_word}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="words-section">
+                    <h2>Rastgele Türkçe Kelimeler (${data.stats.words.toLocaleString()} toplam)</h2>
+                    <div class="word-cloud">
+                        ${data.random_words.map(item => `
+                            <span class="word-tag">${item.word}</span>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('content').innerHTML = html;
+        }
+        
+        // Fetch data immediately
+        fetchData();
+        
+        // Auto-refresh every 5 seconds
+        setInterval(fetchData, 5000);
+
+        // Force-clean the title in case an emoji/flag is injected by extensions or caches
+        (function ensureCleanTitle(){
+            const h1 = document.querySelector('h1');
+            if (!h1) return;
+            const desired = 'Kindi';
+
+            function stripLeadingEmoji(str) {
+                // Remove any leading regional-indicator flag pair(s) and common emoji
+                let s = str;
+                const flagPair = /^(?:[\uD83C][\uDDE6-\uDDFF]){2}\s*/u; // national flag emojis
+                const emojiLead = /^(\p{Extended_Pictographic}|\p{Emoji_Presentation}|\p{Emoji})+\s*/u;
+                // Try repeatedly in case multiple
+                for (let i = 0; i < 5; i++) {
+                    const before = s;
+                    s = s.replace(flagPair, '').replace(emojiLead, '');
+                    if (s === before) break;
+                }
+                return s.trimStart();
+            }
+
+            function sanitize() {
+                // Remove any image nodes inserted before/inside the title
+                h1.querySelectorAll('img, svg, picture').forEach(n => n.remove());
+                // Clean text content
+                const cleaned = stripLeadingEmoji(h1.textContent || '');
+                h1.textContent = cleaned || desired;
+                if (h1.textContent !== desired) {
+                    h1.textContent = desired; // normalize exactly
+                }
+            }
+
+            sanitize();
+            // Observe future mutations (some extensions may re-inject)
+            const mo = new MutationObserver(sanitize);
+            mo.observe(h1, { childList: true, characterData: true, subtree: true });
+        })();
+    </script>
+</body>
+</html>
+
