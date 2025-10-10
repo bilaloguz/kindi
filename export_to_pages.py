@@ -2,6 +2,7 @@
 import json
 import os
 import sqlite3
+from datetime import datetime, timezone
 
 DB_PATH = os.path.join('crawler_data', 'turkish_syllables.db')
 OUT_PATH = os.path.join('docs', 'data.json')
@@ -66,6 +67,7 @@ def main():
         'top_digraphs': top_digraphs,
         'top_trigraphs': top_trigraphs,
         'random_words': random_words,
+        'last_updated': datetime.now(timezone.utc).isoformat(),
     }
 
     os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)

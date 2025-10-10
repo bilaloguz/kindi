@@ -29,6 +29,7 @@
         .word-tag { background:#333; color:#e0e0e0; padding:5px 12px; border-radius:15px; font-size:0.9em; }
         .loading { text-align:center; color:#888; padding:40px; }
         .refresh-info { text-align:center; color:#666; font-size:0.85em; margin-top:20px; }
+        .last-updated { text-align:center; color:#4fc3f7; font-size:0.9em; margin-bottom:20px; font-weight:bold; }
         .error { background:#d32f2f; color:white; padding:15px; border-radius:5px; margin:20px 0; }
     </style>
     <script>
@@ -46,8 +47,23 @@
                 document.getElementById('content').innerHTML = `<div class="error">Veriler yüklenemedi: ${e.message}</div>`;
             }
         }
+        function formatDateTime(isoString) {
+            if (!isoString) return '';
+            const date = new Date(isoString);
+            return date.toLocaleString('tr-TR', { 
+                timeZone: 'Europe/Istanbul',
+                year: 'numeric', 
+                month: '2-digit', 
+                day: '2-digit', 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
         function render(data) {
+            const lastUpdated = data.last_updated ? `<div class="last-updated">Son Güncelleme: ${formatDateTime(data.last_updated)}</div>` : '';
             const html = `
+                ${lastUpdated}
                 <div class="stats-grid">
                     <div class="stat-card">
                         <h3>Taranan Sayfa</h3>
