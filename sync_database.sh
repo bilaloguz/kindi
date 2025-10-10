@@ -3,17 +3,18 @@
 
 cd /home/bilal/Desktop/dev/kriptoloji
 
-# Check if database has changes
-if git diff --quiet crawler_data/turkish_syllables.db; then
-    echo "No database changes to sync"
-    exit 0
-fi
-
-# Sync database and export data
-echo "Syncing database changes..."
+# Always sync database (crawler updates don't show in git diff for binary SQLite files)
+echo "Syncing database..."
 git add crawler_data/turkish_syllables.db
 python3 export_to_pages.py
 git add docs/data.json
+
+# Only commit and push if there are actual changes
+if git diff --staged --quiet; then
+    echo "No changes to sync"
+    exit 0
+fi
+
 git commit -m "data: auto-sync database and export [$(date +'%Y-%m-%d %H:%M')]"
 git push
 
